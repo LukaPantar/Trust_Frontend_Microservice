@@ -7,7 +7,7 @@
         <label class="font-semibold text-lg">Minimum Trust Filter </label>
         <InputNumber v-model="minTrust" :min="0" :max="100" placeholder="0-100" />
       </div>
-
+      
       <div>
         <h2 class="mb-3 text-xl font-semibold">Stakeholders</h2>
         <DataTable
@@ -23,6 +23,9 @@
           <Column field="probabilistic_trust" header="Probabilistic Trust" />
           <Column field="deterministic_trust" header="Deterministic Trust" />
           <Column field="created_at" header="Created At" />
+          <template #empty>
+            <div class="p-4 text-center text-gray-500">No stakeholders available.</div>
+          </template>
         </DataTable>
       </div>
     </div>

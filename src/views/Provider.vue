@@ -76,14 +76,23 @@
               placeholder="https://example.com/metrics"
             />
           </div>
-        </div>
+
+          <div v-if="requiresProvider" class="flex flex-col md:col-span-2">
+            <label for="providerDid" class="mb-2">Provider DID <span class="text-red-500">*</span></label>
+            <InputText 
+              id="providerDid"
+              v-model="newStakeholder.provider_did" 
+              placeholder="Enter Provider DID (e.g., did:example:provider1)"
+            />
+          </div>
+          </div>
 
         <div class="mt-8 flex justify-end">
           <Button
             label="Create Stakeholder"
             icon="pi pi-plus"
             :loading="isCreating"
-            :disabled="!newStakeholder.type || !newStakeholder.name || !newStakeholder.metrics_url"
+            :disabled="!isFormValid"
             @click="handleCreateStakeholder"
           />
         </div>
@@ -93,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue'; // Import computed
 import axios from 'axios';
 
 // --- INTERFACES & TYPES ---
@@ -116,6 +125,7 @@ const newStakeholder = ref({
   type: null as string | null,
   name: '',
   metrics_url: '',
+  provider_did: '' // NEW: Add provider_did to newStakeholder
 });
 
 // Separate alerts for better UX
@@ -136,20 +146,38 @@ const createFormAlert = ref({ // For messages related to the creation form
 const evaluatorUrl = import.meta.env.VITE_TRUST_METRIC_EVALUATOR_HOST + ':' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_PORT;
 
 // Map frontend text to backend integer types
-// ❗️ VERIFY these integer values match your `StakeholderType` enum in the backend
+// ❗️ VERIFY these integer values match your StakeholderType enum in the backend
 const stakeholderTypeMap: { [key: string]: number } = {
   resource_provider: 0,
-  capacity_provider: 1,
-  resource_capacity: 2,
-  application_provider: 3,
+  resource_capacity: 1,
+  application_provider: 2,
+  resource: 3,
+  capacity_provider: 4
 };
 
 const stakeholderTypes = [
   { text: 'Resource Provider', value: 'resource_provider' },
-  { text: 'Capacity Provider', value: 'capacity_provider' },
-  { text: 'Resource Capacity Provider', value: 'resource_capacity' },
+  { text: 'Resource Capacity', value: 'resource_capacity' },
   { text: 'Application Provider', value: 'application_provider' },
+  { text: 'Resource', value: 'resource' },
+  { text: 'Resource Capacity Provider', value: 'capacity_provider' },
 ];
+// --- COMPUTED PROPERTIES ---
+// NEW: Check if the selected type requires a provider DID
+const requiresProvider = computed(() => {
+  const selectedType = newStakeholder.value.type;
+  return selectedType === 'resource_capacity' || selectedType === 'resource'; 
+});
+
+// NEW: Dynamic form validation based on requiresProvider
+const isFormValid = computed(() => {
+  const baseValid = newStakeholder.value.type && newStakeholder.value.name && newStakeholder.value.metrics_url;
+  if (requiresProvider.value) {
+    return baseValid && newStakeholder.value.provider_did; // Provider DID is required
+  }
+  return baseValid; // Not required
+});
+
 
 // --- METHODS ---
 const showAlert = (message: string, type: AlertType = 'success', targetAlert: 'general' | 'createForm' = 'general') => {
@@ -161,7 +189,7 @@ const showAlert = (message: string, type: AlertType = 'success', targetAlert: 'g
 };
 
 const resetForm = () => {
-  newStakeholder.value = { type: null, name: '', metrics_url: '' };
+  newStakeholder.value = { type: null, name: '', metrics_url: '', provider_did: '' }; // Reset provider_did
   createFormAlert.value.show = false; // Hide create form alert on reset
 };
 
@@ -193,29 +221,35 @@ const handleRemoveStakeholder = async (stakeholderDid: string) => {
 };
 
 const handleCreateStakeholder = async () => {
-  if (!newStakeholder.value.type || !newStakeholder.value.name || !newStakeholder.value.metrics_url) {
-    showAlert('Please fill in all fields.', 'warn', 'createForm'); // Use createFormAlert
+  // Use the new isFormValid computed property for validation
+  if (!isFormValid.value) {
+    showAlert('Please fill in all required fields.', 'warn', 'createForm');
     return;
   }
   isCreating.value = true;
 
   const newDid = `did:example:${Date.now()}`;
   
-  const params = {
-    stakeholder_type: stakeholderTypeMap[newStakeholder.value.type],
+  const params: { [key: string]: any } = { // Define params as an object that can hold any key
+    stakeholder_type: stakeholderTypeMap[newStakeholder.value.type!], // Use ! as we've already validated
     name: newStakeholder.value.name,
     metrics_url: newStakeholder.value.metrics_url,
   };
+
+  // Conditionally add provider_did to params if required
+  if (requiresProvider.value) {
+    params.provider = newStakeholder.value.provider_did;
+  }
   
   try {
     await axios.post(`${evaluatorUrl}/stakeholder/${newDid}`, null, { params });
-    showAlert('Stakeholder created successfully!', 'success', 'general'); // Show general alert for success
+    showAlert('Stakeholder created successfully!', 'success', 'general');
     resetForm();
     await fetchStakeholders(); // Refresh the list
   } catch (error) {
     console.error('Failed to create stakeholder:', error);
     const detail = (error as any).response?.data?.detail || 'Failed to create stakeholder.';
-    showAlert(detail, 'error', 'createForm'); // Use createFormAlert for creation failures
+    showAlert(detail, 'error', 'createForm');
   } finally {
     isCreating.value = false;
   }

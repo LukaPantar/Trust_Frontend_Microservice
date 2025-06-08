@@ -11,11 +11,11 @@
       <div>
         <h2 class="mb-3 text-xl font-semibold">Stakeholders</h2>
         <DataTable
-          :value="filteredResources"
+          :value="filteredStakeholders"
           :responsive-layout="'scroll'"
           class="custom-table"
           selectionMode="single"
-          v-model:selection="selectedResource"
+          v-model:selection="selectedStakeholders"
           dataKey="did"
           >
           <Column field="did" header="DID" />
@@ -36,31 +36,7 @@
 import { ref, computed, defineComponent, onMounted } from 'vue';
 import axios from 'axios';
 
-/*export default defineComponent({
-  setup() {
-    const data = ref<any>(null);
-
-    onMounted(async () => {
-      try {
-        const evaluator_url = import.meta.env.VITE_TRUST_METRIC_EVALUATOR_HOST + ':' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_PORT
-        const response = await fetch(evaluator_url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        data.value = await response.json();
-        console.log('API response:', data.value);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    });
-
-    return {
-      data,
-    };
-  },
-});*/
-
-interface Resource {
+interface Stakeholder {
   did: number;
   name: string;
   created_at: string;
@@ -68,12 +44,10 @@ interface Resource {
   deterministic_trust: number;
 }
 
-const selectedResource = ref<Resource | null>(null);  // For row highlighting
+const selectedStakeholders = ref<Stakeholder | null>(null);  // For row highlighting
 
-const allResources = ref<Resource[]>([
+const allStakeholders = ref<Stakeholder[]>([
 //  { did: 1, name: 'Service A', created_at: 1, probabilistic_trust: 85, deterministic_trust: 75 },
-//  { did: 2, name: 'Service B', created_at: 1, probabilistic_trust: 60, deterministic_trust: 65 },
-//  { did: 3, name: 'Service C', created_at: 1, probabilistic_trust: 95, deterministic_trust: 85 },
 ]);
 const minTrust = ref(0);
 
@@ -82,16 +56,17 @@ onMounted(async () => {
   try {
     const evaluator_url = import.meta.env.VITE_TRUST_METRIC_EVALUATOR_HOST + ':' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_PORT
     const response = await axios.get(`${evaluator_url}/stakeholders`);
-    allResources.value = response.data;
+    allStakeholders.value = response.data.stakeholders;
     console.log(response.data)
   } catch (error) {
     console.error('Failed to fetch resources:', error);
   }
 });
 
-const filteredResources = computed(() =>
-  allResources.value.filter(r => r.probabilistic_trust >= minTrust.value || r.deterministic_trust >= minTrust.value)
+const filteredStakeholders = computed(() =>
+  allStakeholders.value.filter(s => s.probabilistic_trust >= minTrust.value || s.deterministic_trust >= minTrust.value)
 );
+
 </script>
 
 <style scoped>

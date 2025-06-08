@@ -68,7 +68,7 @@
             />
           </div>
 
-          <div class="flex flex-col md:col-span-2">
+          <div v-if="requiresMetrics" class="flex flex-col md:col-span-2">
             <label for="metricsUrl" class="mb-2">Metrics URL </label>
             <InputText 
               id="metricsUrl"
@@ -163,7 +163,12 @@ const stakeholderTypes = [
   { text: 'Resource Capacity Provider', value: 'capacity_provider' },
 ];
 // --- COMPUTED PROPERTIES ---
-// NEW: Check if the selected type requires a provider DID
+
+const requiresMetrics = computed(() => {
+  const selectedType = newStakeholder.value.type;
+  return selectedType === 'resource_capacity' || selectedType === 'resource'; 
+});
+
 const requiresProvider = computed(() => {
   const selectedType = newStakeholder.value.type;
   return selectedType === 'resource_capacity' || selectedType === 'resource'; 
@@ -171,7 +176,10 @@ const requiresProvider = computed(() => {
 
 // NEW: Dynamic form validation based on requiresProvider
 const isFormValid = computed(() => {
-  const baseValid = newStakeholder.value.type && newStakeholder.value.name && newStakeholder.value.metrics_url;
+  const baseValid = newStakeholder.value.type && newStakeholder.value.name;
+  if (requiresMetrics.value) {
+    return baseValid && newStakeholder.value.metrics_url; // Provider DID is required
+  }
   if (requiresProvider.value) {
     return baseValid && newStakeholder.value.provider_did; // Provider DID is required
   }
@@ -233,8 +241,12 @@ const handleCreateStakeholder = async () => {
   const params: { [key: string]: any } = { // Define params as an object that can hold any key
     stakeholder_type: stakeholderTypeMap[newStakeholder.value.type!], // Use ! as we've already validated
     name: newStakeholder.value.name,
-    metrics_url: newStakeholder.value.metrics_url,
   };
+
+  // Conditionally add metrics url to params if required
+  if (requiresProvider.value) {
+    params.metrics_url = newStakeholder.value.metrics_url;
+  }
 
   // Conditionally add provider_did to params if required
   if (requiresProvider.value) {

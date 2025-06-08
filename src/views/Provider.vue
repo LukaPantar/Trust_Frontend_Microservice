@@ -244,7 +244,7 @@ const handleCreateStakeholder = async () => {
   };
 
   // Conditionally add metrics url to params if required
-  if (requiresProvider.value) {
+  if (requiresMetrics.value) {
     params.metrics_url = newStakeholder.value.metrics_url;
   }
 

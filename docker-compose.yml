@@ -1,0 +1,23 @@
+services:
+  # Your Trust Frontend Microservice (Development Mode)
+  frontend:
+    build:
+      context: . # Assumes docker-compose.yml is in the root of the frontend repo
+      dockerfile: Dockerfile
+    container_name: trust_frontend_microservice_dev
+    ports:
+      - "5172:5172" # Map host port 5173 to container port 5173 (Vite default)
+    env_file:
+      - ".env" # Path to your frontend's .env file
+    # This is essential for live reloading: mount your local source code into the container
+    volumes:
+      - .:/app # Mounts the current directory (your frontend project) into /app inside the container
+      - /app/node_modules # Exclude node_modules from the volume mount, as they are installed inside the container
+    # depends_on:
+    #   - evaluator # Uncomment if the frontend needs the evaluator to be up before starting
+    networks:
+      - trust_network # Connects to the custom network
+
+networks:
+  trust_network:
+    external: true # Indicates that 'trust_network' is already created externally

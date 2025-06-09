@@ -16,12 +16,16 @@
           class="custom-table"
           dataKey="did"
         >
-          <Column field="did" header="DID" style="width: 30%"></Column>
-          <Column field="name" header="Name" style="width: 25%"></Column>
-          <Column field="probabilistic_trust" header="Probabilistic Trust" style="width: 20%"></Column>
-          <Column field="deterministic_trust" header="Deterministic Trust" style="width: 20%"></Column>
-          <Column field="created_at" header="Created At" style="width: 20%"></Column>
-          <Column header="Actions" style="width: 15%; text-align: center">
+          <Column field="did" header="DID" style="width: 35%"></Column>
+          <Column field="name" header="Name" style="width: 15%"></Column>
+          <Column field="probabilistic_trust" header="Probabilistic Trust" style="width: 15%"></Column>
+          <Column field="deterministic_trust" header="Deterministic Trust" style="width: 15%"></Column>
+          <Column header="Created At" style="width: 20%">
+            <template #body="slotProps">
+              {{ formatTimestamp(slotProps.data.created_at) }}
+            </template>
+          </Column>
+          <Column header="Actions" style="width: 10%; text-align: center">
             <template #body="slotProps">
               <Button 
                 icon="pi pi-trash" 
@@ -39,15 +43,15 @@
       <div class="my-10 border-t border-gray-200"></div>
 
       <div>
-        <h2 class="mb-4 text-xl font-semibold">Create New Stakeholder</h2>
+        <h2 class="mb-6 text-xl font-semibold">Create New Stakeholder</h2>
 
         <Message v-if="createFormAlert.show" :severity="createFormAlert.type" :closable="true" class="mb-4">
           {{ createFormAlert.message }}
         </Message>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="flex flex-col"> 
-            <label for="stakeholderType" class="mb-2">Stakeholder Type </label>
+        <div class="form-grid">
+          <div class="form-field"> 
+            <label for="stakeholderType">Stakeholder Type</label>
             <Dropdown 
               id="stakeholderType"
               v-model="newStakeholder.type" 
@@ -55,12 +59,11 @@
               optionLabel="text" 
               optionValue="value" 
               placeholder="Select a Type" 
-              class="w-full"
             />
           </div>
 
-          <div class="flex flex-col">
-            <label for="stakeholderName" class="mb-2">Stakeholder Name </label>
+          <div class="form-field">
+            <label for="stakeholderName">Stakeholder Name</label>
             <InputText 
               id="stakeholderName"
               v-model="newStakeholder.name" 
@@ -68,8 +71,8 @@
             />
           </div>
 
-          <div v-if="requiresMetrics" class="flex flex-col md:col-span-2">
-            <label for="metricsUrl" class="mb-2">Metrics URL </label>
+          <div v-if="requiresMetrics" class="form-field full-width">
+            <label for="metricsUrl">Metrics URL</label>
             <InputText 
               id="metricsUrl"
               v-model="newStakeholder.metrics_url" 
@@ -77,16 +80,18 @@
             />
           </div>
 
-          <div v-if="requiresProvider" class="flex flex-col md:col-span-2">
-            <label for="providerDid" class="mb-2">Provider DID <span class="text-red-500">*</span></label>
+          <div v-if="requiresProvider" class="form-field full-width">
+            <label for="providerDid">Provider DID <span class="text-red-500">*</span></label>
             <InputText 
               id="providerDid"
               v-model="newStakeholder.provider_did" 
-              placeholder="Enter Provider DID (e.g., did:example:provider1)"
+              placeholder="Enter Provider DID (e.g. did:example:provider1)"
             />
           </div>
-          </div>
-
+        </div>
+        <div>
+          <br>
+        </div>
         <div class="mt-8 flex justify-end">
           <Button
             label="Create Stakeholder"
@@ -94,6 +99,7 @@
             :loading="isCreating"
             :disabled="!isFormValid"
             @click="handleCreateStakeholder"
+            class="p-button-lg"
           />
         </div>
       </div>
@@ -102,10 +108,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'; // Import computed
+/// <reference types="vite/client" />
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
-// --- INTERFACES & TYPES ---
 interface Stakeholder {
   did: string;
   name: string;
@@ -113,40 +119,21 @@ interface Stakeholder {
   probabilistic_trust: number;
   deterministic_trust: number;
 }
-
 type AlertType = 'success' | 'info' | 'warn' | 'error';
 
-// --- STATE MANAGEMENT ---
 const allStakeholders = ref<Stakeholder[]>([]);
 const isLoading = ref(false);
 const isCreating = ref(false);
-
 const newStakeholder = ref({
   type: null as string | null,
   name: '',
   metrics_url: '',
-  provider_did: '' // NEW: Add provider_did to newStakeholder
+  provider_did: ''
 });
+const generalAlert = ref({ show: false, type: 'success' as AlertType, message: '' });
+const createFormAlert = ref({ show: false, type: 'success' as AlertType, message: '' });
 
-// Separate alerts for better UX
-const generalAlert = ref({ // For actions like removal
-  show: false,
-  type: 'success' as AlertType,
-  message: '',
-});
-
-const createFormAlert = ref({ // For messages related to the creation form
-  show: false,
-  type: 'success' as AlertType,
-  message: '',
-});
-
-
-// --- CONFIGURATION ---
-const evaluatorUrl = import.meta.env.VITE_TRUST_METRIC_EVALUATOR_HOST + ':' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_PORT;
-
-// Map frontend text to backend integer types
-// ❗️ VERIFY these integer values match your StakeholderType enum in the backend
+const evaluatorUrl = 'http://' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_HOST + ':' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_PORT;
 const stakeholderTypeMap: { [key: string]: number } = {
   resource_provider: 0,
   resource_capacity: 1,
@@ -154,7 +141,6 @@ const stakeholderTypeMap: { [key: string]: number } = {
   resource: 3,
   capacity_provider: 4
 };
-
 const stakeholderTypes = [
   { text: 'Resource Provider', value: 'resource_provider' },
   { text: 'Resource Capacity', value: 'resource_capacity' },
@@ -162,49 +148,56 @@ const stakeholderTypes = [
   { text: 'Resource', value: 'resource' },
   { text: 'Resource Capacity Provider', value: 'capacity_provider' },
 ];
-// --- COMPUTED PROPERTIES ---
 
 const requiresMetrics = computed(() => {
   const selectedType = newStakeholder.value.type;
   return selectedType === 'resource_capacity' || selectedType === 'resource'; 
 });
-
 const requiresProvider = computed(() => {
   const selectedType = newStakeholder.value.type;
   return selectedType === 'resource_capacity' || selectedType === 'resource'; 
 });
-
-// NEW: Dynamic form validation based on requiresProvider
 const isFormValid = computed(() => {
   const baseValid = newStakeholder.value.type && newStakeholder.value.name;
+  if (requiresMetrics.value && requiresProvider.value) {
+    return baseValid && newStakeholder.value.metrics_url && newStakeholder.value.provider_did;
+  }
   if (requiresMetrics.value) {
-    return baseValid && newStakeholder.value.metrics_url; // Provider DID is required
+    return baseValid && newStakeholder.value.metrics_url;
   }
   if (requiresProvider.value) {
-    return baseValid && newStakeholder.value.provider_did; // Provider DID is required
+    return baseValid && newStakeholder.value.provider_did;
   }
-  return baseValid; // Not required
+  return baseValid;
 });
 
+const formatTimestamp = (isoString: string) => {
+  if (!isoString) return 'N/A';
+  const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
-// --- METHODS ---
 const showAlert = (message: string, type: AlertType = 'success', targetAlert: 'general' | 'createForm' = 'general') => {
   const alertToUpdate = targetAlert === 'general' ? generalAlert : createFormAlert;
   alertToUpdate.value = { show: true, message, type };
-  setTimeout(() => {
-    alertToUpdate.value.show = false;
-  }, 5000);
+  setTimeout(() => { alertToUpdate.value.show = false; }, 5000);
 };
 
 const resetForm = () => {
-  newStakeholder.value = { type: null, name: '', metrics_url: '', provider_did: '' }; // Reset provider_did
-  createFormAlert.value.show = false; // Hide create form alert on reset
+  newStakeholder.value = { type: null, name: '', metrics_url: '', provider_did: '' };
+  createFormAlert.value.show = false;
 };
 
 const fetchStakeholders = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get(`${evaluatorUrl}/stakeholders`);
+    const response = await axios.get('/stakeholders');
     allStakeholders.value = response.data.stakeholders; 
   } catch (error) {
     console.error('Failed to fetch stakeholders:', error);
@@ -216,50 +209,39 @@ const fetchStakeholders = async () => {
 
 const handleRemoveStakeholder = async (stakeholderDid: string) => {
   if (!confirm('Are you sure you want to remove this stakeholder?')) return;
-
   try {
-    await axios.delete(`${evaluatorUrl}/stakeholder/${stakeholderDid}`);
+    await axios.delete(`/stakeholder/${stakeholderDid}`);
     showAlert('Stakeholder removed successfully!', 'success', 'general');
-    await fetchStakeholders(); // Refresh the list
+    await fetchStakeholders();
   } catch (error) {
-    console.error('Failed to remove stakeholder:', error);
     const detail = (error as any).response?.data?.detail || 'Failed to remove stakeholder.';
     showAlert(detail, 'error', 'general');
   }
 };
 
 const handleCreateStakeholder = async () => {
-  // Use the new isFormValid computed property for validation
   if (!isFormValid.value) {
     showAlert('Please fill in all required fields.', 'warn', 'createForm');
     return;
   }
   isCreating.value = true;
-
   const newDid = `did:example:${Date.now()}`;
-  
-  const params: { [key: string]: any } = { // Define params as an object that can hold any key
-    stakeholder_type: stakeholderTypeMap[newStakeholder.value.type!], // Use ! as we've already validated
+  const params: { [key: string]: any } = {
+    stakeholder_type: stakeholderTypeMap[newStakeholder.value.type!],
     name: newStakeholder.value.name,
   };
-
-  // Conditionally add metrics url to params if required
   if (requiresMetrics.value) {
     params.metrics_url = newStakeholder.value.metrics_url;
   }
-
-  // Conditionally add provider_did to params if required
   if (requiresProvider.value) {
     params.provider = newStakeholder.value.provider_did;
   }
-  
   try {
-    await axios.post(`${evaluatorUrl}/stakeholder/${newDid}`, null, { params });
+    await axios.post(`/stakeholder/${newDid}`, null, { params });
     showAlert('Stakeholder created successfully!', 'success', 'general');
     resetForm();
-    await fetchStakeholders(); // Refresh the list
+    await fetchStakeholders();
   } catch (error) {
-    console.error('Failed to create stakeholder:', error);
     const detail = (error as any).response?.data?.detail || 'Failed to create stakeholder.';
     showAlert(detail, 'error', 'createForm');
   } finally {
@@ -267,19 +249,43 @@ const handleCreateStakeholder = async () => {
   }
 };
 
-// --- LIFECYCLE HOOK ---
 onMounted(fetchStakeholders);
 </script>
 
 <style scoped>
-/* Re-using the same custom styles from Users.vue for perfect consistency */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-field label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
 .custom-table .p-datatable {
   font-size: 1.125rem;
   border: 1px solid #ccc;
   border-radius: 12px;
   overflow: hidden;
 }
-
 .custom-table .p-datatable-thead > tr > th {
   background-color: #f5f5fa;
   font-weight: 600;
@@ -287,16 +293,13 @@ onMounted(fetchStakeholders);
   padding: 1.2rem;
   border-bottom: 2px solid #ddd;
 }
-
 .custom-table .p-datatable-tbody > tr > td {
   padding: 1.4rem;
   font-size: 1.125rem;
 }
-
 .custom-table .p-datatable-tbody > tr:nth-child(even) {
   background-color: #fafafa;
 }
-
 .main-card {
   border: 1px solid #dcdce5;
   border-radius: 16px;

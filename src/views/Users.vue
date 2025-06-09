@@ -49,6 +49,7 @@ interface Stakeholder {
   deterministic_trust: number;
 }
 
+const evaluatorUrl = 'http://' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_HOST + ':' + import.meta.env.VITE_TRUST_METRIC_EVALUATOR_PORT;
 const selectedStakeholders = ref<Stakeholder | null>(null);
 const allStakeholders = ref<Stakeholder[]>([]);
 const minTrust = ref(0);
@@ -67,7 +68,7 @@ const formatTimestamp = (isoString: string) => {
 
 onMounted(async () => {
   try {
-    const response = await axios.get('/stakeholders');
+    const response = await axios.get('/all_stakeholders');
     allStakeholders.value = response.data.stakeholders;
   } catch (error) {
     console.error('Failed to fetch resources:', error);

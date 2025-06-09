@@ -197,7 +197,7 @@ const resetForm = () => {
 const fetchStakeholders = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get('/stakeholders');
+    const response = await axios.get(`/stakeholders/${import.meta.env.VITE_OWNER_DID}`);
     allStakeholders.value = response.data.stakeholders; 
   } catch (error) {
     console.error('Failed to fetch stakeholders:', error);
@@ -229,6 +229,7 @@ const handleCreateStakeholder = async () => {
   const params: { [key: string]: any } = {
     stakeholder_type: stakeholderTypeMap[newStakeholder.value.type!],
     name: newStakeholder.value.name,
+    owner: import.meta.env.VITE_OWNER_DID,
   };
   if (requiresMetrics.value) {
     params.metrics_url = newStakeholder.value.metrics_url;

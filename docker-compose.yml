@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: trust_frontend_microservice_dev
     ports:
-      - "5172:5172" # Map host port 5173 to container port 5173 (Vite default)
+      - "5173:5173" # Map host port 5173 to container port 5173 (Vite default)
     env_file:
       - ".env" # Path to your frontend's .env file
     # This is essential for live reloading: mount your local source code into the container

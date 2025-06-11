@@ -4,7 +4,7 @@
       <h1 class="mb-5 text-2xl font-bold">Stakeholder Trust Overview</h1>
 
       <div class="mb-6 flex items-center gap-4">
-        <label class="font-semibold text-lg">Minimum Trust Filter</label>
+        <label class="font-semibold text-lg">Minimum Trust Filter </label>
         <InputNumber v-model="minTrust" :min="0" :max="100" placeholder="0-100" />
       </div>
       

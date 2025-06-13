@@ -22,6 +22,7 @@ cd TrustFrontendMicroservice
 
 ### 2. Create the .env File
 - Copy the contents of `.env.TEMPLATE` to a new file named `.env` in the same directory.
+
 ### 3. Create the Docker Network (only once)
 Before running any microservice, create the shared Docker network (do this only once):
 ```powershell
@@ -41,6 +42,16 @@ This will build and start the frontend container. By default, the frontend will 
 
 ### 5. Environment Variables
 The `.env` file is already set up for Docker-based communication. No changes are needed unless you want to customize service names or ports.
+
+```powershell
+# IP or hostname of Trust Metric Evaluator
+VITE_TRUST_METRIC_EVALUATOR_HOST=trust_evaluator_microservice
+# Port of Trust Metric Evaluator
+VITE_TRUST_METRIC_EVALUATOR_PORT=8001
+
+# Manually set Owner DID (for provider site)
+VITE_OWNER_DID=did:owner:1
+```
 
 ## Notes
 - Make sure the backend microservices (TrustEvaluator and TrustAggregator) are also running on the same `trust_network` for full functionality.
